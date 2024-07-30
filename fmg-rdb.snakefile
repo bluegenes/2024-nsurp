@@ -53,8 +53,8 @@ rule branchwater_fastmultigather:
     output: f"{out_dir}/{{basename}}-x-{{database_basename}}.fmg.csv"
     params:
         db_dir = f"{out_dir}/{{database_basename}}.rocksdb"
-    log: f"{logs_dir}/fastmultigather/{{basename}}-x-{{database_basename}}.fmg.log"
-    benchmark: f"{logs_dir}/fastmultigather/{{basename}}-x-{{database_basename}}.fmg.benchmark"
+    log: f"{logs_dir}/fastmultigather-rdb/{{basename}}-x-{{database_basename}}.fmg.log"
+    benchmark: f"{logs_dir}/fastmultigather-rdb/{{basename}}-x-{{database_basename}}.fmg.benchmark"
     conda: "branchwater.yml"
     threads: 4
     shell:
