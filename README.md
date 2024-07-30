@@ -1,14 +1,16 @@
 # 2024-nsurp
 
-Automate NSURP commands to check results
+Automate NSURP Ralstonia LIN-based taxonomic profiling
 
-## Setup:
+## Setup (on `farm`):
 
-First, `git clone` this repository and cd into the folder.
+First, `git clone` this repository and cd into the folder:
+```
+git clone https://github.com/bluegenes/2024-nsurp
+cd 2024-nsurp
+```
 
-Download the files if necessary or softlink them into this directory
-
-example soft link:
+Softlink the metagenome files into this directory
 ```
 ln -s /group/ctbrowngrp4/mmerid/Ralstonia/rawdata/*fastq.gz ./inputs
 ```
@@ -22,9 +24,7 @@ mv ralstonia.sc1000.zip databases/ralstonia32.zip
 ls databases # look at the database files
 ```
 
-
-
-Install mamba environment (contains snakemake)
+Install mamba environment (contains snakemake, which we'll use to run)
 ```
 mamba env create -f environment.yml
 mamba activate 2024-nsurp
@@ -32,7 +32,7 @@ mamba activate 2024-nsurp
 
 ## Run:
 
-If on farm, open a tmux and then start an `srun` session with 10 CPU and 50G RAM
+Open a tmux and then start an `srun` session with 10 CPU and 50G RAM
 ```
 srun -p med2 --time=1-00:00:00 -c 10 --mem 50GB --pty bash
 ```
@@ -44,5 +44,5 @@ snakemake -n
 
 Run the workflow:
 ```
-snakemake -c 4
+snakemake -c 10
 ```
