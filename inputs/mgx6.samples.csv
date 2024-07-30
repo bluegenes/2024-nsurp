@@ -1,0 +1,7 @@
+name,read1,read2
+ERR7672970,inputs/ERR7672970_1.fastq.gz,inputs/ERR7672970_2.fastq.gz
+SRR14267071,inputs/SRR14267071_1.fastq.gz,inputs/SRR14267071_2.fastq.gz
+SRR20746679,inputs/SRR20746679_1.fastq.gz,inputs/SRR20746679_2.fastq.gz
+SRR22278231,inputs/SRR22278231_1.fastq.gz,inputs/SRR22278231_2.fastq.gz
+SRR5234505,inputs/SRR5234505_1.fastq.gz,inputs/SRR5234505_2.fastq.gz
+SRR8553642,inputs/SRR8553642_1.fastq.gz,inputs/SRR8553642_2.fastq.gz

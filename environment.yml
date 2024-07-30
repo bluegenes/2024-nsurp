@@ -1,0 +1,8 @@
+name: 2024-nsurp
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - snakemake=8.16
+  - pandas=2.2

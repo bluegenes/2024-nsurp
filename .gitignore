@@ -1,0 +1,6 @@
+inputs/*gz
+output*/*
+databases/*zip
+.snakemake/
+*zip
+*rocksdb
