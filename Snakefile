@@ -16,7 +16,7 @@ rule all:
     input:
         expand(f"{out_dir}/{basename}.zip", basename=basename),
         expand(f"{out_dir}/{basename}-x-{database_basename}.fmg.csv", basename=basename, database_basename=database_basename),
-        expand(f"{out_dir}/{basename}-x-{database_basename}.lingroup.csv", basename=basename, database_basename=database_basename),
+        expand(f"{out_dir}/{basename}-x-{database_basename}.lingroup.tsv", basename=basename, database_basename=database_basename),
 
 
 rule branchwater_manysketch:
@@ -67,7 +67,7 @@ rule sourmash_taxonomy:
         gather_csv = f"{out_dir}/{{basename}}-x-{{database_basename}}.fmg.csv",
         taxonomy_csv = database_tax,
         lingroups_csv = database_lingroups
-    output: f"{out_dir}/{{basename}}-x-{{database_basename}}.lingroup.csv"
+    output: f"{out_dir}/{{basename}}-x-{{database_basename}}.lingroup.tsv"
     params:
         output_base = f"{out_dir}/{{basename}}-x-{{database_basename}}"
     log: f"{logs_dir}/taxonomy/{{basename}}-x-{{database_basename}}.log"
@@ -76,7 +76,7 @@ rule sourmash_taxonomy:
     threads: 1
     shell:
         """
-        sourmash tax metagenome --gather-csv {input.gather_csv} \
+        sourmash tax metagenome --gather-csv {input.gather_csv} --lins \
                                      --taxonomy-csv {input.taxonomy_csv} \
                                      --lingroup {input.lingroups_csv} \
                                      -o {params.output_base} 2> {log}
