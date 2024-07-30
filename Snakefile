@@ -23,7 +23,7 @@ database_lingroups = "databases/ralstonia32.lingroups.csv"
 rule all:
     input:
         expand(f"{out_dir}/{basename}.zip", basename=basename),
-        expand(f"{out_dir}/{{sample}}.lingroup.tsv", sample=SAMPLES)
+        expand(f"{out_dir}/{{sample}}-x-{database_basename}.lingroup.tsv", sample=SAMPLES)
 
 
 rule branchwater_manysketch:
@@ -50,6 +50,7 @@ rule branchwater_fastmultigather:
     shell:
         """
         sourmash scripts fastmultigather -k 21 --scaled 1000 {input.samples} {input.database} 2> {log}
+        mv *gather.csv *prefetch.csv {out_dir}
         """
 
 rule sourmash_taxonomy:
@@ -57,7 +58,7 @@ rule sourmash_taxonomy:
         gather_csv = f"{out_dir}/{{sample}}.gather.csv",
         taxonomy_csv = database_tax,
         lingroups_csv = database_lingroups
-    output: f"{out_dir}/{{sample}}.lingroup.tsv"
+    output: f"{out_dir}/{{sample}}-x-{database_basename}.lingroup.tsv"
     params:
         output_base = f"{out_dir}/{{sample}}-x-{database_basename}"
     log: f"{logs_dir}/taxonomy/{{sample}}-x-{database_basename}.log"
