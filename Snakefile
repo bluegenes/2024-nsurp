@@ -21,7 +21,7 @@ rule all:
 
 rule branchwater_manysketch:
     input: samples_csv
-    output: "{basename}.zip"
+    output: f"{out_dir}/{{basename}}.zip"
     log: f"{logs_dir}/manysketch/{{basename}}.log"
     benchmark: f"{logs_dir}/manysketch/{{basename}}.benchmark"
     conda: "branchwater.yml"
@@ -48,7 +48,7 @@ rule branchwater_index_database:
 
 rule branchwater_fastmultigather:
     input: 
-        samples = "{basename}.zip",
+        samples = f"{out_dir}/{{basename}}.zip",
         database = f"{out_dir}/{{database_basename}}.rocksdb/CURRENT"
     output: f"{out_dir}/{{basename}}-x-{{database_basename}}.fmg.csv"
     params:
@@ -76,7 +76,7 @@ rule sourmash_taxonomy:
     threads: 1
     shell:
         """
-        sourmash taxonomy metagenome --gather-csv {input.gather_csv} \
+        sourmash tax metagenome --gather-csv {input.gather_csv} \
                                      --taxonomy-csv {input.taxonomy_csv} \
                                      --lingroup {input.lingroups_csv} \
                                      -o {params.output_base} 2> {log}
