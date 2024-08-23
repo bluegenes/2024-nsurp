@@ -73,22 +73,20 @@ rule aggregate_lingroup_taxonomy:
     input: 
         tax_files = expand(f"{out_dir}/tax/{{sample}}-x-{database_basename}.lingroup.tsv", sample=SAMPLES)
     output: f"{out_dir}/{basename}-x-{database_basename}.lingroup.tsv"
-    log: f"{logs_dir}/taxonomy/{database_basename}.aggregate-lingroup.log"
-    benchmark: f"{logs_dir}/taxonomy/{database_basename}.aggregate-lingroup.benchmark"
     threads: 1
     run: 
         def extract_sample_name(filename):
             fn = os.path.basename(filename)
             return fn.split('-x-')[0]
 
-        with open(output_file, mode='w', newline='') as outfile:
+        with open(str(output), mode='w', newline='') as outfile:
             writer = csv.writer(outfile, delimiter='\t')
             # Write the header
             header_written = False
             
             # Iterate over files in the directory
             for filename in input.tax_files:
-                sample_name = extract_sample_name(filename)
+                sample_name = extract_sample_name(str(filename))
                 # Open the input file
                 with open(filename, mode='r') as inF:
                     reader = csv.reader(inF, delimiter='\t')
@@ -108,4 +106,4 @@ rule aggregate_lingroup_taxonomy:
                         row.insert(0, sample_name) # prepend sample
                         writer.writerow(row)
 
-        print(f"Combined file saved to {output_file}")
+        print(f"Combined file saved to '{output}'")
