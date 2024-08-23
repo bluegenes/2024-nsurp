@@ -46,11 +46,13 @@ rule branchwater_fastmultigather:
     log: f"{logs_dir}/fastmultigather/{basename}.fmg.log"
     benchmark: f"{logs_dir}/fastmultigather/{basename}.fmg.benchmark"
     conda: "branchwater.yml"
+    params:
+        outd=out_dir,
     threads: 10
     shell:
         """
         sourmash scripts fastmultigather -k 21 --scaled 1000 {input.samples} {input.database} 2> {log}
-        mv *gather.csv *prefetch.csv {out_dir}
+        mv *gather.csv *prefetch.csv {params.outd}
         """
 
 rule sourmash_taxonomy:
