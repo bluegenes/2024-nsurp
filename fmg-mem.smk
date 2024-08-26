@@ -5,7 +5,7 @@ import math
 # define some variables
 samples_file = "ralstonia-wort-sigs.txt"
 basename = "ralstonia-wort"
-# samples_file = "ralstonia-wort-sigs.h2000.txt"
+# samples_file = "ralstonia-wort-sigs.h2000.txt" # first 2000
 database_basename = "ralstonia32"
 ralstonia_database = "databases/ralstonia32.zip"
 database_tax = "databases/ralstonia32.lin-taxonomy.csv"
