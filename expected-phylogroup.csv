@@ -1,0 +1,8 @@
+country,expected_phylogroup
+UK,PhylII
+China,PhylII;PhylIII
+Australia,PhylIV
+Brazil,PhylII
+South Africa,PhylI
+United States,PhylII
+

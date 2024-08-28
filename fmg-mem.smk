@@ -84,48 +84,30 @@ rule sourmash_taxonomy:
                                      -o {params.output_base} -F csv_summary 2> {log}
         """
 
+# write all lingroup files to a text file that can be used to aggregate
+rule write_lingroup_files:
+    input:
+        lingroup_files = expand(f"{out_dir}/tax-k{{ksize}}-sc{{scaled}}/{{sample}}-x-{database_basename}.lingroup.tsv", sample=SAMPLES, ksize=KSIZE, scaled=SCALED)
+    output: f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.lingroup_files.txt"
+    run:
+        with open(output[0], 'w') as f:
+            for inF in input.lingroup_files:
+                f.write(str(inF) + '\n')
+
+
 # aggregate the lingroup files into a single file
-## for now, just aggregate all lines and pick later. Later, perhaps filter for best result??
 rule aggregate_lingroup_taxonomy:
     input:
-        tax_files = expand(f"{out_dir}/tax-k{{ksize}}-sc{{scaled}}/{{sample}}-x-{database_basename}.lingroup.tsv", sample=SAMPLES, ksize=KSIZE, scaled=SCALED)
+        lingroup_files = f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.lingroup_files.txt"
     output: f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.lingroup.tsv"
     threads: 1
-    run: 
-        def extract_sample_name(filename):
-            fn = os.path.basename(filename)
-            return fn.split('-x-')[0]
-
-        with open(str(output), mode='w', newline='') as outfile:
-            writer = csv.writer(outfile, delimiter='\t')
-            # Write the header
-            header_written = False
-            
-            # Iterate over files in the directory
-            for filename in input.tax_files:
-                sample_name = extract_sample_name(str(filename))
-                # Open the input file
-                with open(filename, mode='r') as inF:
-                    reader = csv.reader(inF, delimiter='\t')
-                    # Write the header only once
-                    if not header_written:
-                        header = next(reader)
-                        # header.append('sample_name') 
-                        header.insert(0, 'sample') # prepend sample_name
-                        writer.writerow(header)
-                        header_written = True
-                    else:
-                        next(reader)  # Skip the header
-                        
-                    # Write the data rows
-                    for row in reader:
-                        # row.append(sample_name)
-                        row.insert(0, sample_name) # prepend sample
-                        writer.writerow(row)
-
-        print(f"Combined file saved to '{output}'")
+    shell:
+        """
+        python aggregate-lingroups.py --output {output} --lingroups {input.lingroup_files}
+        """
 
 
+# now, extract the best phylogroup for each sample and merge with metadata
 rule extract_best_phylogroup_and_merge_branchwater_metadata:
     input:
         agg_lingroups =f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.lingroup.tsv",
@@ -134,7 +116,20 @@ rule extract_best_phylogroup_and_merge_branchwater_metadata:
     threads: 1
     shell:
         """
-        python scripts/extract_best_match.py --lingroup-csv {input} \
-                                             --best {output} \
-                                             --metadata {database_lingroups}
+        python extract-best-match.py --lingroup-csv {input.agg_lingroups} \
+                                     --best {output} \
+                                     --metadata {input.metadata}
+        """
+
+rule compare_best_phylogroup:
+    input:
+        best_phylogroup = f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.best-phylogroup.tsv",
+        expected_phylogroups = "expected-phylogroup.csv",
+    output: f"{out_dir}/{basename}-x-{database_basename}.k{{ksize}}-sc{{scaled}}.phylogroup-compare.tsv"
+    threads: 1
+    shell:
+        """
+        python compare-phylogroup.py --best {input.best_phylogroup} \
+                                     --metadata {input.expected_phylogroup} \
+                                     --output {output}
         """
