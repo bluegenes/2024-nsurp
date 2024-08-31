@@ -9,10 +9,11 @@ def extract_sample_name(filename):
 def main(args):
 
     # read in lingroup file list
-    with open(args.lingroup_files, mode='r') as infile:
-        lg_files = infile.readlines()
+    with args.lingroups as infile:
+        # read in the list of lingroup files and strip
+        lg_files = [line.strip() for line in infile]
 
-    with open(args.output, mode='w', newline='') as outfile:
+    with args.output as outfile:
             writer = csv.writer(outfile, delimiter='\t')
             # make sure we write the header only once
             header_written = False

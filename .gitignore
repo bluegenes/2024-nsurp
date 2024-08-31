@@ -4,3 +4,5 @@ databases/*zip
 .snakemake/
 *zip
 *rocksdb
+*txt
+*csv
