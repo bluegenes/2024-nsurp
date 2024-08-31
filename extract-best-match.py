@@ -50,7 +50,7 @@ def main(args):
                           'containment': 'branchwater_containment',
                           'organism': 'sra_organism'}, inplace=True)
                           #'num_bp_contained': 'num_bp_contained_phylogroup'
-    df.drop(columns=['name', 'lin', 'num_bp_contained', 'acc'], inplace=True)
+    df.drop(columns=['num_bp_contained', 'acc'], inplace=True)
 
     best_matches.rename(columns={'percent_containment': 'phylogroup_containment',
                                  'containment': 'branchwater_containment',
