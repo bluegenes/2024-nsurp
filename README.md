@@ -46,3 +46,18 @@ Run the workflow:
 ```
 snakemake -c 10
 ```
+
+
+## To do plotting:
+
+Create the plotting environment:
+```
+mamba env create -f plot-env.yml
+```
+
+```
+mamba activate plot-env
+
+# run the Rmarkdown file
+Rscript -e "rmarkdown::render('plot-phylogroup-map.Rmd')"
+```

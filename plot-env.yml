@@ -1,0 +1,15 @@
+name: plot-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base=4.3
+  - r-ggplot2
+  - r-plotly
+  - r-dplyr
+  - r-knitr
+  - r-rmarkdown
+  - r-htmlwidgets
+  - r-maps
+  - r-rcolorbrewer
+  - pandoc

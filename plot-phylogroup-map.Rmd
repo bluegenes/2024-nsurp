@@ -1,0 +1,314 @@
+---
+title: "plot-phylogroup-map"
+author: "Tessa Pierce Ward"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Introduction
+
+Here we generate an interactive map of metagenome samples using their latitude and longitude, with points colored by sourmash taxonomy assignment to `phylogroup`.
+
+## Load Libraries
+
+Load the necessary libraries: `ggplot2`, `plotly`, and `dplyr`.
+
+```{r load-libraries}
+# Load required libraries
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(maps)
+library(RColorBrewer)
+
+
+```
+
+## Load and Preprocess the Data
+
+Load dataset from CSV. We need to extract the `latitude` and `longitude` from the `lat_lon` column for mapping.
+
+```{r load-data}
+# Read the data
+data <- read.csv("output.ralstonia_sra/branchwater-c0.2-x-ralstonia32.k21-sc1000.phylogroup-compare.best-only.csv", stringsAsFactors = FALSE)
+
+# Function to convert coordinates
+parse_lat_lon <- function(lat_lon) {
+  # Strip extra escape characters and quotes
+  lat_lon <- gsub("\"", "", lat_lon)
+  
+  # Strip any extra quotes
+  lat_lon <- gsub('^"+|"+$', '', lat_lon)
+  
+   # Strip any extra backslashes
+  lat_lon <- gsub("\\\\", "", lat_lon)
+  
+  # Check if the entry is "NP", "missing", or other placeholders
+  if (lat_lon %in% c("NP", "missing", "not applicable", "not collected", "Not collected")) {
+    #print(paste("Non-coordinate placeholder detected; assigning NA:", lat_lon))
+    latitude <- NA
+    longitude <- NA
+  }
+  # Handle "[lat, lon]" format (standard case)
+  else if (grepl("\\[", lat_lon)) {
+    latitude <- as.numeric(gsub("\\[|,.*", "", lat_lon))
+    longitude <- as.numeric(gsub(".*\\,|\\]", "", lat_lon))
+    # print(paste("Parsed lat_lon as coordinates:", latitude, longitude))
+  }
+   # Handle complex "1¡20'1\"\"N 103¡45'15\"\"E" style coordinates
+  else if (grepl("¡", lat_lon)) {
+    print(paste("Detected complex degree-minute-second format:", lat_lon))
+    # Extract latitude and longitude components
+    lat_parts <- unlist(regmatches(lat_lon, regexec("(\\d+)¡(\\d+)'(\\d+)N", lat_lon)))
+    lon_parts <- unlist(regmatches(lat_lon, regexec("(\\d+)¡(\\d+)'(\\d+)E", lat_lon)))
+    
+    if (length(lat_parts) == 4 && length(lon_parts) == 4) {
+      # Convert degrees, minutes, and seconds to decimal format
+      latitude <- as.numeric(lat_parts[2]) + as.numeric(lat_parts[3]) / 60 + as.numeric(lat_parts[4]) / 3600
+      longitude <- as.numeric(lon_parts[2]) + as.numeric(lon_parts[3]) / 60 + as.numeric(lon_parts[4]) / 3600
+      
+      # If South or West, negate the value
+      if (grepl("S", lat_lon)) latitude <- -latitude
+      if (grepl("W", lat_lon)) longitude <- -longitude
+      print(paste("Parsed complex lat_lon as:", latitude, longitude))
+    } else {
+      print("Error: Could not parse degree-minute-second format.")
+      latitude <- NA
+      longitude <- NA
+    }
+  }
+  # Handle "36 N 78 W" style coordinates (pure degrees)
+  else if (grepl("[NSns]", lat_lon) && grepl("[EWew]", lat_lon)) {
+    #print(paste("Detected pure degrees format:", lat_lon))
+    # Extract the latitude and longitude components
+    lat_lon_parts <- unlist(strsplit(lat_lon, " "))
+    
+    if (length(lat_lon_parts) == 4) {
+      # Latitude handling (first part with N/S direction)
+      latitude <- as.numeric(lat_lon_parts[1])
+      if (grepl("[Ss]", lat_lon_parts[2])) {
+        latitude <- -latitude
+      }
+      
+      # Longitude handling (third part with E/W direction)
+      longitude <- as.numeric(lat_lon_parts[3])
+      if (grepl("[Ww]", lat_lon_parts[4])) {
+        longitude <- -longitude
+      }
+      #print(paste("Parsed lat_lon as:", latitude, longitude))
+    } else {
+      print("Error: Could not split lat_lon correctly.")
+      latitude <- NA
+      longitude <- NA
+    }
+  }
+  # If not a recognized format, return NA and log the error
+  else {
+    message("Unrecognized lat_lon format: ", lat_lon)
+    latitude <- NA
+    longitude <- NA
+  }
+  
+  return(c(latitude, longitude))
+}
+
+# Apply the parsing function to the dataset
+data <- data %>%
+  rowwise() %>%
+  mutate(
+    parsed_coords = list(parse_lat_lon(lat_lon)),
+    latitude = parsed_coords[1],
+    longitude = parsed_coords[2]
+  ) %>%
+  ungroup() %>%
+  select(-parsed_coords)
+
+# Display the data to ensure correct parsing
+head(data)
+```
+## Assess NAs
+```{r assess-na}
+# How many rows have NAs in latitude or longitude
+num_na_rows <- sum(is.na(data$latitude) | is.na(data$longitude))
+print(paste("Number of rows with NA in latitude or longitude:", num_na_rows))
+
+# filter to get these NA rows
+na_lat_lon_rows <- data %>% filter(is.na(latitude) | is.na(longitude))
+# get unique vals in lat_lon for these
+unique_lat_lon_na <- unique(na_lat_lon_rows$lat_lon)
+
+print("Unique lat_lon values where latitude or longitude is NA:")
+print(unique_lat_lon_na)
+```
+
+## Create a Static Map with `ggplot2`
+
+Using `ggplot2`, we'll create a static map where each sample is plotted according to its latitude and longitude, and colored by `phylogroup`.
+
+```{r static-map}
+p <- ggplot(data, aes(x = longitude, y = latitude, color = phylogroup)) +
+  borders("world", colour = "gray85", fill = "gray80") +  # World map background
+  geom_jitter(size = 1.5, alpha = 0.6, width = 0.2, height = 0.2) +  # Add jitter with specified width/height
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal() +
+  labs(title = "Sample Locations by Phylogroup",
+       x = "Longitude", y = "Latitude") +
+  theme(legend.position = "right")
+
+# Display the static map
+p
+```
+
+## Convert to an Interactive Map with `plotly`
+
+We can now convert the static map into an interactive one using `plotly`.
+
+```{r interactive-map}
+# Convert ggplot to plotly for interactivity
+interactive_map <- ggplotly(p)
+
+# Display the interactive map
+interactive_map
+```
+
+## Split the data by lat/long, country
+```{r split-data}
+# Separate the data into two datasets: one with lat_lon, one with only country info
+data_with_latlon <- data %>% filter(!is.na(latitude) & !is.na(longitude))
+data_without_latlon <- data %>% filter(is.na(latitude) | is.na(longitude)) %>%
+  filter(!is.na(geo_loc_name_country_calc))  # Assuming 'geo_loc_name_country_calc' is the country column
+
+# Count the number of samples per country for rows without lat_lon
+country_sample_count <- data_without_latlon %>%
+  group_by(geo_loc_name_country_calc) %>%  # Group by country
+  summarise(sample_count = n())  # Count samples per country
+
+# Merge the country sample counts with the map data
+world_map_data <- map_data("world")
+world_map_data <- left_join(world_map_data, country_sample_count, by = c("region" = "geo_loc_name_country_calc"))
+
+# Count the total number of samples per country (for shading purposes)
+#country_total_count <- data_without_latlon %>%
+#  group_by(geo_loc_name_country_calc) %>%
+#  summarise(total_sample_count = n())
+
+# Count the number of samples per country and phylogroup for rows without lat_lon
+#country_phylogroup_count <- data_without_latlon %>%
+#  group_by(geo_loc_name_country_calc, phylogroup) %>%
+#  summarise(sample_count = n(), .groups = 'drop')  # Ensure ungrouping after summarising
+
+#world_map_data <- left_join(world_map_data, country_total_count, by = c("region" = "geo_loc_name_country_calc"))
+
+```
+
+## Add country points to the map
+We don't seem to be able to go interactive here -- hitting memory limit :/.
+
+```{r dual-map}
+p <- ggplot() +
+  borders("world", colour = "gray85", fill = "gray80", size = 0.2) +  # World map background
+  geom_map(data = world_map_data, map = world_map_data,
+           aes(map_id = region, fill = sample_count),
+           color = "white", size = 0.2) +  # Shade countries based on the number of samples
+  scale_fill_gradient(low = "lightblue", high = "darkblue", na.value = "gray90", name = "Sample Count") +  # Customize shading
+  geom_jitter(data = data_with_latlon, aes(x = longitude, y = latitude, color = phylogroup), size = 1.5, alpha = 0.6) +  # Points for lat_lon data
+  theme_minimal() +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Sample Locations and Countries",
+       x = "Longitude", y = "Latitude") +
+  theme(legend.position = "right")
+
+# Convert to interactive plotly plot to allow mouseover information
+#p_plotly <- ggplotly(p, tooltip = c("geo_loc_name_country_calc", "phylogroup"))  # Add mouseover info
+
+# Show the interactive plot
+#p_plotly
+p
+
+#interactive_map <- ggplotly(p)
+#interactive_map
+```
+
+## Try to reduce memory usage by plotting points directly with plotly
+```{r plotly-direct}
+# Generate a static map with ggplot2
+ggplot_static_map <- ggplot() +
+  borders("world", colour = "gray85", fill = "gray80", size = 0.2) +  # Static world map
+  theme_minimal() +
+  labs(title = "Sample Locations and Countries", x = "Longitude", y = "Latitude") +
+  theme(legend.position = "right")
+
+# Convert the static map to a plotly object
+p_plotly_map <- ggplotly(ggplot_static_map)
+
+# Now, plot the interactive points using plotly and overlay them on the map
+p_plotly_combined <- p_plotly_map %>%
+  add_trace(data = data_with_latlon,
+            x = ~longitude, y = ~latitude,
+            type = "scatter", mode = "markers",
+            marker = list(size = 7, opacity = 0.6),
+            color = ~phylogroup, colors = "Dark2",
+            text = ~paste("Phylogroup:", phylogroup),
+            hoverinfo = "text")
+
+# Display the combined plot
+p_plotly_combined
+
+```
+
+
+```{r check-size}
+dim(data_without_latlon)
+```
+
+## Try adding countries to this approach
+
+# ```{r plotly-direct-with-countries}
+# # Keep only the necessary columns: country and phylogroup
+# data_without_latlon_reduced <- data_without_latlon %>%
+#   select(geo_loc_name_country_calc, phylogroup)
+# 
+# # Count the number of samples per country
+# country_sample_count <- data_without_latlon_reduced %>%
+#   group_by(geo_loc_name_country_calc) %>%
+#   summarise(sample_count = n())  # Count samples per country
+# 
+# # Get simplified world map data for reduced memory usage
+# world_map_data <- map_data("world", resolution = 0)
+# 
+# # Merge the country sample counts with the map data
+# world_map_data <- left_join(world_map_data, country_sample_count, by = c("region" = "geo_loc_name_country_calc"))
+# 
+# # Generate a static map with ggplot2, including shading for country sample counts
+# ggplot_static_map <- ggplot() +
+#   borders("world", colour = "gray85", fill = "gray80", size = 0.2) +  # Static world map background
+#   geom_map(data = world_map_data, map = world_map_data,
+#            aes(map_id = region, fill = sample_count),  # Shading by sample count
+#            color = "white", size = 0.2) +  # Add white borders between countries
+#   scale_fill_gradient(low = "lightblue", high = "darkblue", na.value = "gray90", name = "Sample Count") +  # Gradient shading for sample count
+#   theme_minimal() +
+#   labs(title = "Sample Locations and Countries", x = "Longitude", y = "Latitude") +
+#   theme(legend.position = "right")
+# 
+# # Convert the static map to a plotly object
+# p_plotly_map <- ggplotly(ggplot_static_map)
+# 
+# data_with_latlon_reduced <- data_with_latlon %>%
+#   select(latitude, longitude, phylogroup)  # Ensure we are only keeping the essential columns
+# 
+# # Plot the interactive points using plotly and overlay them on the shaded map
+# p_plotly_combined <- p_plotly_map %>%
+#   add_trace(data = data_with_latlon_reduced,
+#             x = ~longitude, y = ~latitude,
+#             type = "scatter", mode = "markers",
+#             marker = list(size = 7, opacity = 0.6),
+#             color = ~phylogroup, colors = "Dark2",
+#             text = ~paste("Phylogroup:", phylogroup),
+#             hoverinfo = "text")
+# 
+# # Display the combined plot with country shading and interactive points
+# p_plotly_combined
+```
