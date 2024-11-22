@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Introduction
 
-Here we generate an interactive map of metagenome samples using their latitude and longitude, with points colored by sourmash taxonomy assignment to `phylogroup`.
+Here we generate an interactive map of metagenome samples using their latitude and longitude, with points colored by sourmash taxonomy assignment to `phylotype`.
 
 ## Load Libraries
 
@@ -23,8 +23,6 @@ library(plotly)
 library(dplyr)
 library(maps)
 library(RColorBrewer)
-
-
 ```
 
 ## Load and Preprocess the Data
@@ -33,8 +31,10 @@ Load dataset from CSV. We need to extract the `latitude` and `longitude` from th
 
 ```{r load-data}
 # Read the data
-data <- read.csv("output.ralstonia_sra/branchwater-c0.2-x-ralstonia32.k21-sc1000.phylogroup-compare.best-only.csv", stringsAsFactors = FALSE)
+data <- read.csv("./output.ralstonia_sra/branchwater-c0.2-x-ralstonia32.k21-sc1000.phylogroup-compare.best-only.csv", stringsAsFactors = FALSE)
 
+# add dashes to Phylotypes for easier reading on plots
+data$phylogroup <- gsub("Phyl([IV]+)", "Phyl-\\1", data$phylogroup)
 # Function to convert coordinates
 parse_lat_lon <- function(lat_lon) {
   # Strip extra escape characters and quotes
@@ -161,6 +161,10 @@ p <- ggplot(data, aes(x = longitude, y = latitude, color = phylogroup)) +
 # Display the static map
 p
 ```
+```{r}
+ggsave("ralstonia-branchwater.k21.pdf", plot = p, device = "pdf", width = 10, height = 6)
+```
+
 
 ## Convert to an Interactive Map with `plotly`
 
@@ -230,6 +234,10 @@ p
 
 #interactive_map <- ggplotly(p)
 #interactive_map
+```
+
+```{r}
+ggsave("ralstonia-branchwater-with-country.k21.pdf", plot = p, device = "pdf", width = 10, height = 6)
 ```
 
 ## Try to reduce memory usage by plotting points directly with plotly
